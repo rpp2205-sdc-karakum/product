@@ -8,19 +8,20 @@ const db = require('../database/db.js');
 
 // get first 20 products
 app.get('/products', async (req, res) => {
-  let products = db.get20Products();
+  let products = await db.get20Products();
   res.send(products);
 })
 
 // get product by id
-app.get('/products/:product_id', (req, res) => {
-  let product = db.getProductById(req.params.product_id);
+app.get('/products/:product_id', async (req, res) => {
+  let product = await db.getProductById(req.params.product_id);
   res.send(product);
 });
 
 // get style info for a product by id
 app.get('/products/:product_id/styles', async (req, res) => {
-  let styles = db.getProductById(req.params.product_id).styles;
+  let styles = await db.getProductById(req.params.product_id);
+  styles = styles[0].styles;
   res.send(styles);
 })
 
