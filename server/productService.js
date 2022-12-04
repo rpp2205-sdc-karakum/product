@@ -14,15 +14,20 @@ app.get('/products', async (req, res) => {
 
 // get product by id
 app.get('/products/:product_id', async (req, res) => {
-  let product = await db.getProductById(req.params.product_id);
+  let products = await db.getProductById(req.params.product_id);
+  let product = products[0]
   res.send(product);
 });
 
 // get style info for a product by id
 app.get('/products/:product_id/styles', async (req, res) => {
-  let styles = await db.getProductById(req.params.product_id);
-  styles = styles[0].styles;
-  res.send(styles);
+  let products = await db.getProductById(req.params.product_id);
+  styles = products[0].styles;
+  let result = {
+    product_id: req.params.product_id,
+    results: styles
+  }
+  res.send(result);
 })
 
 const port = process.env.PORT || 3000;
