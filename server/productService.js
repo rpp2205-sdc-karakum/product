@@ -15,7 +15,7 @@ app.get('/products', async (req, res) => {
 // get product by id
 app.get('/products/:product_id', async (req, res) => {
   let products = await db.getProductById(req.params.product_id);
-  let product = products[0]
+  let product = products[0];
   res.send(product);
 });
 
