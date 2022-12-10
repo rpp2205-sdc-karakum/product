@@ -5,18 +5,22 @@
   "main": "productService.js",
   "scripts": {
     "server-dev": "npx nodemon --watch server server/productService.js",
-    "start": "node server/productService.js"
+    "start": "node server/productService.js",
+    "test": "npx jest --silent=false"
   },
   "author": "camjhirsh",
   "license": "ISC",
   "dependencies": {
     "axios": "^0.21.1",
+    "chai": "^4.3.7",
+    "chai-http": "^4.3.0",
     "csv-parse": "^5.3.2",
     "csv-parser": "^3.0.0",
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
     "mongoose": "^6.7.2",
     "msw": "^0.47.4",
-    "nodemon": "^2.0.20"
+    "nodemon": "^2.0.20",
+    "supertest": "^6.3.2"
   }
 }
