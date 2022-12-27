@@ -4,6 +4,8 @@ const csv = require('fast-csv');
 const path = require('path');
 const db = require('./db.js');
 
+
+// load and save product to DB
 var asyncLoadAndSaveProduct = () => {
 
   return new Promise((resolve, reject) => {
@@ -16,6 +18,10 @@ var asyncLoadAndSaveProduct = () => {
       .pipe(parser)
       .on('error', error => console.error(error))
       .on('data', async (data) => {
+        data.styles = {
+          product_id: data.id,
+          results: []
+        };
         productRows.push(data);
         if (productRows.length === 10000) {
           parser.pause();
@@ -27,45 +33,60 @@ var asyncLoadAndSaveProduct = () => {
       .on('end', async () => {
         await db.addProducts(productRows)
         console.log('all product loaded to db');
+        // const result = await db.createIndex({ id: 1 });
+        // console.log('RESULT index:', result);
         resolve();
       })
-  })
+  });
 }
 
-  // return new Promise((resolve, reject) => {
-  //   fs.createReadStream("../assets/product.csv")
-  //     .pipe(csvParser())
-  //     .on("data", (data) => {
-  //       data.styles = {};
-  //       productDb[data.id] = data;
-  //     })
-  //     .on("end", () => {
-  //       console.log('parse product complete');
-  //       resolve(productDb);
-  //     })
-  // })
+// load and save styles to DB
+var asyncLoadAndSaveStyles = () => {
 
-var asyncLoadAndSaveStyles = (productDb) => {
-  var styleIdToProductId = {};
   return new Promise((resolve, reject) => {
-    fs.createReadStream("../assets/styles.csv")
-      .pipe(csvParser())
-      .on("data", (data) => {
-        productDb[data.productId].styles[data.id] = {
-          id:         data.id,
-          name:       data.name,
+
+    const stylesPath = path.join(__dirname, '../assets/styles.csv');
+    const parser = csv.parse({ headers: true });
+    let productStyles = [];
+    let groupProductId = '1';
+
+    fs.createReadStream(stylesPath)
+      .pipe(parser)
+      .on('error', error => console.error(error))
+      .on('data', async (data) => {
+
+        let currentProductId = data.productId;
+
+        if (currentProductId !== groupProductId) {
+          parser.pause();
+          let docs = await db.getProductById(data.productId);
+          let doc = docs[0];
+          doc.styles.results = productStyles;
+          await doc.save()
+          productStyles = [];
+          groupProductId = currentProductId;
+          parser.resume();
+        }
+
+        let style = {
+          style_id: data.id,
+          name: data.name,
+          original_price: data.original_price,
           sale_price: data.sale_price,
-          default:    data.default_style,
-          photos: [],
-          skus: []
-        };
-        styleIdToProductId[data.id] = data.productId;
+          default: data.default_style === '1' ? true: false
+        }
+        productStyles.push(style);
+
+        if (data.id % 100000 === 0) {
+          console.log('100k repeat', data.id);
+        }
+
       })
-      .on("end", () => {
-        console.log('parse styles complete');
-        resolve([productDb, styleIdToProductId]);
+      .on('end', async () => {
+        console.log('all styles added');
+        resolve();
       })
-  })
+  });
 }
 
 var asyncLoadAndSavePhotos = (productDb, styleIdToProductId) => {
@@ -107,7 +128,7 @@ var asyncLoadAndSaveSkus = (productDb, styleIdToProductId) => {
 }
 
 
-var populateDB = async () => {
+var createProducts = async () => {
 
   console.log('clearning db');
   await db.clearDB();
@@ -124,7 +145,27 @@ var populateDB = async () => {
 
 };
 
-populateDB();
+// createProducts();
+
+var addStyles = async () => {
+
+  console.log('adding styles')
+  await asyncLoadAndSaveStyles();
+  console.log('styles added')
+  prod = await db.getProductById('1');
+  console.log('find one', prod);
+
+}
+
+// addStyles();
+
+var createDB = async () => {
+  await createProducts()
+  await addStyles()
+}
+
+createDB();
+
 
 // var [productDb, styleIdToProductId] = await asyncReadStyles(productDb);
 // productDb = await asyncReadPhotos(productDb, styleIdToProductId);
@@ -146,11 +187,11 @@ populateDB();
 // resolve(db);
 
 // clearDB
-var clear = async () => {
-  console.log('clearing');
-  console.log('find result:', db.get20Products());
-  await db.clearDB();
-  console.log('find result:', db.get20Products());
-  console.log('cleared');
-}
+// var clear = async () => {
+//   console.log('clearing');
+//   console.log('find result:', db.get20Products());
+//   await db.clearDB();
+//   console.log('find result:', db.get20Products());
+//   console.log('cleared');
+// }
 // clear();
