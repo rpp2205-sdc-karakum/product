@@ -107,6 +107,14 @@ module.exports = {
 
   getProductStyles: (productId) => {
     return Style.find( { productId });
+  },
+
+  getPhotosForStyle: (styleId) => {
+    return Photo.find( { styleId });
+  },
+
+  getSkusForStyle: (styleId) => {
+    return Sku.find( { styleId });
   }
 
 }

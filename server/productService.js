@@ -21,13 +21,19 @@ app.get('/products/:product_id', async (req, res) => {
 
 // get style info for a product by id
 app.get('/products/:product_id/styles', async (req, res) => {
-  let products = await db.getProductById(req.params.product_id);
-  styles = products[0].styles;
-  let result = {
+  let styles = await db.getProductStyles(req.params.product_id);
+  // for each style, add the photos and skus for it
+  for (style of styles) {
+    let photos = await db.getPhotosForStyle(style.id);
+    let skus = await db.getSkusForStyle(style.id);
+    style.photos = photos;
+    style.skus = skus;
+  }
+  let final = {
     product_id: req.params.product_id,
     results: styles
   }
-  res.send(result);
+  res.send(final);
 })
 
 const port = process.env.PORT || 3000;
