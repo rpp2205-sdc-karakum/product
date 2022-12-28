@@ -20,7 +20,23 @@ const styleSchema = new mongoose.Schema({
   productId: { type: String, index: true },
   name: String,
   sale_price: String,
-  default_style: Number
+  default_style: Number,
+  photos: [
+    {
+      id: String,
+      styleId: { type: String, index: true },
+      url: String,
+      thumbnail_url: String
+    }
+  ],
+  skus: [
+    {
+      id: String,
+      styleId: { type: String, index: true },
+      size: String,
+      quantity: String
+    }
+  ]
 }, { collection: 'style' });
 
 // Photo Schema

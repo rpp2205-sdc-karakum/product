@@ -57,6 +57,8 @@ var asyncLoadAndSaveStyles = () => {
       .pipe(parser)
       .on('error', error => console.error(error))
       .on('data', async (data) => {
+        data.photos = [];
+        data.skus = [];
         styleRows.push(data);
         if (styleRows.length === 10000) {
           parser.pause();
@@ -163,4 +165,13 @@ var createAll = async () => {
   console.log('done all');
 }
 
-createAll();
+// createAll();
+
+var func = async () => {
+  console.log('clearing')
+  await db.clearStyle();
+  console.log('clear')
+  await asyncLoadAndSaveStyles();
+}
+
+func();

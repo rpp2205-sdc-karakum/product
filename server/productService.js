@@ -33,6 +33,7 @@ app.get('/products/:product_id/styles', async (req, res) => {
     product_id: req.params.product_id,
     results: styles
   }
+  console.log('done')
   res.send(final);
 })
 
