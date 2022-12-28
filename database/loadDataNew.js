@@ -4,13 +4,15 @@ const csv = require('fast-csv');
 const path = require('path');
 const db = require('./db.js');
 
+const productPath = path.join(__dirname, '../assets/product.csv');
+const stylesPath = path.join(__dirname, '../assets/styles.csv');
 
-// load and save product to DB
+
+// load and save all products and metadata to collection
 var asyncLoadAndSaveProduct = () => {
 
   return new Promise((resolve, reject) => {
 
-    const productPath = path.join(__dirname, '../assets/product.csv');
     let productRows = [];
     const parser = csv.parse({ headers: true });
 
@@ -25,12 +27,17 @@ var asyncLoadAndSaveProduct = () => {
         productRows.push(data);
         if (productRows.length === 10000) {
           parser.pause();
-          await db.addProducts(productRows)
+          productRows = await addStyles(productRows);
+          await db.addProducts(productRows);
+          console.log('up to:', productRows[productRows.length-1]);
           productRows = [];
           parser.resume();
         }
       })
       .on('end', async () => {
+        productRows = await addStyles(productRows);
+        // productRows = await addPhotos(productRows);
+        // productRows = await addSkus(productRows);
         await db.addProducts(productRows)
         console.log('all product loaded to db');
         resolve();
@@ -38,59 +45,61 @@ var asyncLoadAndSaveProduct = () => {
   });
 }
 
-// load and save styles to DB
-var asyncLoadAndSaveStyles = () => {
+// add styles to input products
+var addStyles = (productRows) => {
 
   return new Promise((resolve, reject) => {
 
-    const stylesPath = path.join(__dirname, '../assets/styles.csv');
     const parser = csv.parse({ headers: true });
     let productStyles = [];
     let groupProductId = '1';
 
-    fs.createReadStream(stylesPath)
+    var readStream = fs.createReadStream(stylesPath);
+    readStream
       .pipe(parser)
       .on('error', error => console.error(error))
-      .on('data', async (data) => {
+      .on('data', (data) => {
 
-        let currentProductId = data.productId;
+        if (data.productId >= productRows[0].id && data.productId <= productRows[productRows.length - 1].id + 1) {
 
-        if (currentProductId !== groupProductId) {
-          parser.pause();
-          let docs = await db.getProductById(groupProductId);
-          let doc = docs[0];
-          doc.styles.results = productStyles;
-          await doc.save()
-          productStyles = [];
-          groupProductId = currentProductId;
-          parser.resume();
-        }
+          let currentProductId = data.productId;
 
-        let style = {
-          style_id: data.id,
-          name: data.name,
-          original_price: data.original_price,
-          sale_price: data.sale_price,
-          default: data.default_style === '1' ? true: false,
-          photos: [],
-          skus: []
-        }
+          if (currentProductId !== groupProductId) {
+            for (var pEntry of productRows) {
+              if (pEntry.id === groupProductId) {
+                pEntry.styles.results = productStyles;
+                break;
+              }
+            }
+            productStyles = [];
+            groupProductId = currentProductId;
+            if (groupProductId == productRows[productRows.length - 1].id + 1) {
+              readStream.destroy();
+              resolve(productRows);
+            }
+          }
 
-        productStyles.push(style);
-
-        if (data.id % 100000 === 0) {
-          console.log('100k repeat', data.id);
+          let style = {
+            style_id: data.id,
+            name: data.name,
+            original_price: data.original_price,
+            sale_price: data.sale_price,
+            default: data.default_style === '1' ? true: false,
+            photos: [],
+            skus: []
+          }
+          productStyles.push(style);
         }
 
       })
-      .on('end', async () => {
+      .on('end', () => {
         console.log('all styles added');
-        resolve();
+        resolve(productRows);
       })
   });
 }
 
-// load and save photos to DB
+// add photos to input products
 var asyncLoadAndSavePhotos = () => {
 
   return new Promise((resolve, reject) => {
@@ -176,49 +185,49 @@ var createProducts = async () => {
 
 // createProducts();
 
-var addStyles = async () => {
+// var addStyles = async () => {
 
-  console.log('adding styles')
-  await asyncLoadAndSaveStyles();
-  console.log('styles added')
-  prod = await db.getProductById('1');
-  console.log('find one', prod);
+//   console.log('adding styles')
+//   await asyncLoadAndSaveStyles();
+//   console.log('styles added')
+//   prod = await db.getProductById('1');
+//   console.log('find one', prod);
 
-}
+// }
 
 // addStyles();
 
-var addPhotos = async () => {
+// var addPhotos = async () => {
 
-  console.log('adding photos')
-  await asyncLoadAndSavePhotos();
-  console.log('photos added')
-  prod = await db.getProductById('1');
-  console.log('find one', prod[0].styles);
+//   console.log('adding photos')
+//   await asyncLoadAndSavePhotos();
+//   console.log('photos added')
+//   prod = await db.getProductById('1');
+//   console.log('find one', prod[0].styles);
 
-}
+// }
 
 // addPhotos();
 
 var createDB = async () => {
   await createProducts()
   await addStyles()
-  await asyncLoadAndSavePhotos()
+  // await asyncLoadAndSavePhotos()
 }
 
 createDB();
 
 
 
-var addPhotos = async () => {
+// var addPhotos = async () => {
 
-  console.log('adding styles')
-  await asyncLoadAndSaveStyles();
-  console.log('styles added')
-  prod = await db.getProductById('1');
-  console.log('find one', prod);
+//   console.log('adding styles')
+//   await asyncLoadAndSaveStyles();
+//   console.log('styles added')
+//   prod = await db.getProductById('1');
+//   console.log('find one', prod);
 
-}
+// }
 
 var findbyStyle = async () => {
   let docs = await db.getProductByStyleId('37');

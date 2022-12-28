@@ -4,66 +4,97 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 mongoose.connect('mongodb://localhost/product');
 
-// Schema
+// Product Schema
 const productSchema = new mongoose.Schema({
   id: { type: String, index: true },
   name: String,
   category: String,
   slogan: String,
   description: String,
-  default_price: String,
-  styles: {
-    product_id: String,
-    results: [
-      {
-        style_id: String,
-        name: String,
-        original_price: String,
-        sale_price: String,
-        default: Boolean,
-        photos: [
-          {
-            id: String,
-            url: String,
-            thumbnail_url: String
-          }
-        ],
-        skus: [
-          {
-            id: String,
-            size: String,
-            quantity: String
-          }
-        ]
-      }
-    ]
-  }
+  default_price: String
 }, { collection: 'product' });
 
-// index
-// productSchema.index({ id: 1 });
+// Style Schema
+const styleSchema = new mongoose.Schema({
+  id: { type: String, index: true },
+  productId: { type: String, index: true },
+  name: String,
+  sale_price: String,
+  default_style: Number
+}, { collection: 'style' });
+
+// Photo Schema
+const photoSchema = new mongoose.Schema({
+  id: String,
+  styleId: { type: String, index: true },
+  url: String,
+  thumbnail_url: String
+}, { collection: 'photo' });
+
+// Sku Schema
+const skuSchema = new mongoose.Schema({
+  id: String,
+  styleId: { type: String, index: true },
+  size: String,
+  quantity: String
+}, { collection: 'sku' });
+
+
 
 // make an instance of schema and export
 const Product = mongoose.model('Product', productSchema);
+// make an instance of schema and export
+const Style = mongoose.model('Style', styleSchema);
+// make an instance of schema and export
+const Photo = mongoose.model('Photo', photoSchema);
+// make an instance of schema and export
+const Sku = mongoose.model('Sku', skuSchema);
 
-// index for immediate search for product by Id
-// Product.index({ id: 1 });
 
 // Interaction and exports
 
 module.exports = {
 
-  clearDB: () => {
+  clearProduct: () => {
     return Product.deleteMany();
   },
 
+  clearStyle: () => {
+    return Style.deleteMany();
+  },
+
+  clearPhoto: () => {
+    return Photo.deleteMany();
+  },
+
+  clearSku: () => {
+    return Sku.deleteMany();
+  },
+
   addProduct: (oneProduct) => {
-    const product = new Product( oneProduct )
+    var product = new Product( oneProduct )
     return product.save();
+  },
+
+  addStyle: (oneStyle) => {
+    var style = new Style( oneStyle )
+    return style.save();
   },
 
   addProducts: (productsArray) => {
     return Product.insertMany( productsArray );
+  },
+
+  addStyles: (stylesArray) => {
+    return Style.insertMany( stylesArray );
+  },
+
+  addPhotos: (photosArray) => {
+    return Photo.insertMany( photosArray );
+  },
+
+  addSkus: (skusArray) => {
+    return Sku.insertMany( skusArray );
   },
 
   getProductById: (id) => {
@@ -72,8 +103,15 @@ module.exports = {
 
   get20Products: (id) => {
     return Product.find( {} ).limit( 20 );
+  },
+
+  getProductStyles: (productId) => {
+    return Style.find( { productId });
   }
 
 }
 
 module.exports.Product = Product;
+module.exports.Style = Style;
+module.exports.Photo = Photo;
+module.exports.Sku = Sku;
