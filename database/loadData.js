@@ -1,6 +1,9 @@
-const fs = require("fs");
-const csv = require('fast-csv');
+const fs = require('fs');
+const csv = require('csv-parser');
 const path = require('path');
+
+// connect to db
+require('./index.js').db;
 
 const Product = require('../server/models/product.js');
 const Style = require('../server/models/style.js');
@@ -21,7 +24,7 @@ var asyncLoadAndSaveProducts = () => {
   return new Promise((resolve, reject) => {
 
     var productRows = [];
-    const parser = csv.parse({ headers: true });
+    const parser = csv();
 
     fs.createReadStream(productPath)
       .pipe(parser)
@@ -54,7 +57,7 @@ var asyncLoadAndSaveStyles = () => {
   return new Promise((resolve, reject) => {
 
     var styleRows = [];
-    const parser = csv.parse({ headers: true });
+    const parser = csv();
 
     fs.createReadStream(stylesPath)
       .pipe(parser)
@@ -89,10 +92,10 @@ var asyncLoadAndSavePhotos = () => {
   return new Promise((resolve, reject) => {
 
     let photoRows = [];
-    const parser = csv.parse({ headers: true });
+    const parser = csv();
 
     fs.createReadStream(photosPath)
-      .pipe(csvParser())
+      .pipe(parser)
       .on('error', error => console.error(error))
       .on('data', async (data) => {
         photoRows.push(data);
@@ -122,10 +125,10 @@ var asyncLoadAndSaveSkus = () => {
   return new Promise((resolve, reject) => {
 
     let skuRows = [];
-    const parser = csv.parse({ headers: true });
+    const parser = csv();
 
     fs.createReadStream(skusPath)
-      .pipe(csvParser())
+      .pipe(parser)
       .on('error', error => console.error(error))
       .on('data', async (data) => {
         skuRows.push(data);
@@ -171,4 +174,12 @@ var createAll = async () => {
   process.exit(0);
 }
 
-createAll();
+var oops = async () => {
+  await asyncLoadAndSavePhotos();
+  await asyncLoadAndSaveSkus();
+  console.log('done');
+}
+
+oops();
+
+// createAll();
