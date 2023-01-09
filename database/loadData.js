@@ -1,260 +1,177 @@
-const fs = require("fs");
-const csvParser = require("csv-parser");
-const csv = require('fast-csv');
+const fs = require('fs');
+const csv = require('csv-parser');
 const path = require('path');
-const db = require('./db.js');
+
+// connect to db
+require('./index.js').db;
+
+const Product = require('../server/models/product.js');
+const Style = require('../server/models/style.js');
+const Photo = require('../server/models/photo.js');
+const Sku = require('../server/models/sku.js');
+
+const productPath = path.join(__dirname, '../assets/product.csv');
+const stylesPath = path.join(__dirname, '../assets/styles.csv');
+const photosPath = path.join(__dirname, '../assets/photos.csv');
+const skusPath = path.join(__dirname, '../assets/skus.csv');
 
 
-// load and save product to DB
-var asyncLoadAndSaveProduct = () => {
+// load and save product to collection
+var asyncLoadAndSaveProducts = () => {
+
+  console.log('starting product');
 
   return new Promise((resolve, reject) => {
 
-    const productPath = path.join(__dirname, '../assets/product.csv');
-    let productRows = [];
-    const parser = csv.parse({ headers: true });
+    var productRows = [];
+    const parser = csv();
 
     fs.createReadStream(productPath)
       .pipe(parser)
       .on('error', error => console.error(error))
       .on('data', async (data) => {
-        data.styles = {
-          product_id: data.id,
-          results: []
-        };
         productRows.push(data);
         if (productRows.length === 10000) {
           parser.pause();
-          await db.addProducts(productRows)
+          await Product.addProducts(productRows)
           productRows = [];
           parser.resume();
         }
+        if (data.id % 200000 === 0) {
+          console.log('200k repeat', data.id);
+        }
       })
       .on('end', async () => {
-        await db.addProducts(productRows)
+        await Product.addProducts(productRows)
         console.log('all product loaded to db');
         resolve();
       })
   });
 }
 
-// load and save styles to DB
+// load and save styles to collection
 var asyncLoadAndSaveStyles = () => {
+
+  console.log('starting styles');
 
   return new Promise((resolve, reject) => {
 
-    const stylesPath = path.join(__dirname, '../assets/styles.csv');
-    const parser = csv.parse({ headers: true });
-    let productStyles = [];
-    let groupProductId = '1';
+    var styleRows = [];
+    const parser = csv();
 
     fs.createReadStream(stylesPath)
       .pipe(parser)
       .on('error', error => console.error(error))
       .on('data', async (data) => {
-
-        let currentProductId = data.productId;
-
-        if (currentProductId !== groupProductId) {
+        data.photos = [];
+        data.skus = [];
+        styleRows.push(data);
+        if (styleRows.length === 10000) {
           parser.pause();
-          let docs = await db.getProductById(groupProductId);
-          let doc = docs[0];
-          doc.styles.results = productStyles;
-          await doc.save()
-          productStyles = [];
-          groupProductId = currentProductId;
+          await Style.addStyles(styleRows);
+          styleRows = [];
           parser.resume();
         }
-
-        let style = {
-          style_id: data.id,
-          name: data.name,
-          original_price: data.original_price,
-          sale_price: data.sale_price,
-          default: data.default_style === '1' ? true: false,
-          photos: [],
-          skus: []
+        if (data.id % 300000 === 0) {
+          console.log('300k repeat', data.id);
         }
-
-        productStyles.push(style);
-
-        if (data.id % 100000 === 0) {
-          console.log('100k repeat', data.id);
-        }
-
       })
       .on('end', async () => {
+        await Style.addStyles(styleRows);
         console.log('all styles added');
         resolve();
       })
   });
 }
 
-// load and save photos to DB
+// load and save photos to collection
 var asyncLoadAndSavePhotos = () => {
 
+  console.log('starting photos');
+
   return new Promise((resolve, reject) => {
 
-    const photosPath = path.join(__dirname, '../assets/photos.csv');
-    const parser = csv.parse({ headers: true });
-    let style_photos = [];
-    let groupStyleId = '1';
+    let photoRows = [];
+    const parser = csv();
 
     fs.createReadStream(photosPath)
-      .pipe(csvParser())
+      .pipe(parser)
       .on('error', error => console.error(error))
       .on('data', async (data) => {
-
-        let currentStyleId = data.styleId;
-
-        if (currentStyleId !== groupStyleId) {
+        photoRows.push(data);
+        if (photoRows.length === 10000) {
           parser.pause();
-          let docs = await db.getProductByStyleId(groupStyleId);
-          let doc = docs[0];
-          doc.styles.results.forEach(s => s.style_id == groupStyleId? s.photos = style_photos: null)
-          await doc.save()
-          style_photos = [];
-          groupStyleId = currentStyleId;
+          await Photo.addPhotos(photoRows);
+          photoRows = [];
           parser.resume();
         }
-
-        let photo = {
-          id: data.id,
-          thumbnail_url: data.thumbnail_url,
-          url: data.url
+        if (data.id % 1000000 === 0) {
+          console.log('1mill repeat', data.id);
         }
-        style_photos.push(photo);
-
-        if (data.id % 100000 === 0) {
-          console.log('100k repeat', data.id);
-        }
-
       })
-      .on("end", () => {
-        console.log('parse photos complete');
-        resolve(productDb);
+      .on('end', async () => {
+        await Photo.addPhotos(photoRows);
+        console.log('all photos added');
+        resolve();
       })
   })
 }
 
-var asyncLoadAndSaveSkus = (productDb, styleIdToProductId) => {
+// load and save skus to collection
+var asyncLoadAndSaveSkus = () => {
+
+  console.log('starting skus');
+
   return new Promise((resolve, reject) => {
-    fs.createReadStream("../assets/skus.csv")
-      .pipe(csvParser())
-      .on("data", (data) => {
-          var prodId = styleIdToProductId[data.styleId];
-          productDb[prodId].styles[data.styleId].skus.push({
-            id: data.id,
-            size: data.size,
-            quantity: data.quantity
-          });
+
+    let skuRows = [];
+    const parser = csv();
+
+    fs.createReadStream(skusPath)
+      .pipe(parser)
+      .on('error', error => console.error(error))
+      .on('data', async (data) => {
+        skuRows.push(data);
+        if (skuRows.length === 10000) {
+          parser.pause();
+          await Sku.addSkus(skuRows);
+          skuRows = [];
+          parser.resume();
+        }
+        if (data.id % 1000000 === 0) {
+          console.log('1mill repeat', data.id);
+        }
       })
-      .on("end", () => {
-        console.log('parse skus complete');
-        resolve(productDb);
+      .on('end', async () => {
+        await Sku.addSkus(skuRows);
+        console.log('all skus added');
+        resolve();
       })
   })
 }
 
+var createAll = async () => {
 
-var createProducts = async () => {
+  console.log('clearing product');
+  await Product.clearProduct();
+  console.log('cleared product');
+  console.log('clearing style');
+  await Style.clearStyle();
+  console.log('cleared style');
+  console.log('clearing photo');
+  await Photo.clearPhoto();
+  console.log('cleared photos');
+  console.log('clearing sku');
+  await Sku.clearSku();
+  console.log('cleared sku');
 
-  console.log('clearning db');
-  await db.clearDB();
-  console.log('cleared');
-
-  let prod = await db.getProductById('1');
-  console.log('find one', prod);
-
-  console.log('loading and saving product table')
-  await asyncLoadAndSaveProduct();
-  console.log('finsihed product');
-  prod = await db.getProductById('1');
-  console.log('find one', prod);
-
-};
-
-// createProducts();
-
-var addStyles = async () => {
-
-  console.log('adding styles')
+  await asyncLoadAndSaveProducts();
   await asyncLoadAndSaveStyles();
-  console.log('styles added')
-  prod = await db.getProductById('1');
-  console.log('find one', prod);
-
-}
-
-// addStyles();
-
-var addPhotos = async () => {
-
-  console.log('adding photos')
   await asyncLoadAndSavePhotos();
-  console.log('photos added')
-  prod = await db.getProductById('1');
-  console.log('find one', prod[0].styles);
+  await asyncLoadAndSaveSkus();
 
+  console.log('database loaded');
+  process.exit(0);
 }
 
-// addPhotos();
-
-var createDB = async () => {
-  await createProducts()
-  await addStyles()
-  await asyncLoadAndSavePhotos()
-}
-
-createDB();
-
-
-
-var addPhotos = async () => {
-
-  console.log('adding styles')
-  await asyncLoadAndSaveStyles();
-  console.log('styles added')
-  prod = await db.getProductById('1');
-  console.log('find one', prod);
-
-}
-
-var findbyStyle = async () => {
-  let docs = await db.getProductByStyleId('37');
-  let doc = docs[0]
-  doc.styles.results.forEach(s => s.style_id == '37'? s.photos = [ { id: '2', thumbnail_url: 'string', url: 'string' } ]: null)
-  console.log(doc.styles.results[0]);
-}
-
-// findbyStyle();
-
-
-// var [productDb, styleIdToProductId] = await asyncReadStyles(productDb);
-// productDb = await asyncReadPhotos(productDb, styleIdToProductId);
-// productDb = await asyncReadSkus(productDb, styleIdToProductId);
-
-// // save each entry to DB (~45 min)
-// var db = [];
-// for (pId in productDb) {
-//   var styles = [];
-//   for (sId in productDb[pId].styles) {
-//     styles.push(productDb[pId].styles[sId]);
-//   }
-//   productDb[pId].styles = styles;
-//   await db.addProduct(productDb[pId]);
-// }
-
-// // complete
-// console.log('MADE IT');
-// resolve(db);
-
-// clearDB
-// var clear = async () => {
-//   console.log('clearing');
-//   console.log('find result:', db.get20Products());
-//   await db.clearDB();
-//   console.log('find result:', db.get20Products());
-//   console.log('cleared');
-// }
-// clear();
+createAll();
