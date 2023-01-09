@@ -1,4 +1,5 @@
 const Style = require('../../database/models/style.js').Style;
+const db = require('../../database/index.js');
 
 module.exports = {
 

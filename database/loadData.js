@@ -174,12 +174,4 @@ var createAll = async () => {
   process.exit(0);
 }
 
-var oops = async () => {
-  await asyncLoadAndSavePhotos();
-  await asyncLoadAndSaveSkus();
-  console.log('done');
-}
-
-oops();
-
-// createAll();
+createAll();

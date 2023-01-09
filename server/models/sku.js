@@ -1,4 +1,5 @@
 const Sku = require('../../database/models/sku.js').Sku;
+const db = require('../../database/index.js');
 
 module.exports = {
 

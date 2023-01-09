@@ -1,4 +1,5 @@
 const Product = require('../../database/models/product.js').Product;
+const db = require('../../database/index.js');
 
 module.exports = {
 
@@ -15,7 +16,7 @@ module.exports = {
     return Product.insertMany( productsArray );
   },
 
-  get20Products: (id) => {
+  get20Products: () => {
     return Product.find( {} ).limit( 20 );
   },
 
